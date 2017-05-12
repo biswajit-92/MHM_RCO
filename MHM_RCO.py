@@ -13,6 +13,8 @@ import sys
 import time
 import math
 import random
+from ParseInput import *
+from ParseInput import outdir
 
 class TDUtility(object):
     '''
@@ -301,14 +303,15 @@ class CreateMAPInConfig(object):
         self.HighestClusterNo = ''
         self.AllDistinctCluster = ''
         self.MinClusterSize = 2
+         
         
-        shutil.rmtree(os.path.join(os.getcwd(),self.__LogDIR__), ignore_errors=True)
-
+        self.__LogDIR__ = os.path.join(outdir,self.__LogDIR__)
         try:
             os.makedirs(self.__LogDIR__)
         except OSError:
             if not os.path.isdir(self.__LogDIR__):
                 raise
+
         
         self.Config_Parameters()
 
@@ -461,6 +464,7 @@ class CreateMAPInConfig(object):
         @param AmpGroup:  This is the Group of NewReady amps to be allocated to a specific cluster.(existing/new)
         @param ClusterList: List contains valid cluster numbers for the amps.
         '''
+        print AmpGroup,ClusterList
         TempClusterList = ClusterList[:]
         if len(AmpGroup) != len(ClusterList):
             return False
@@ -521,10 +525,12 @@ class CreateMAPInConfig(object):
                 '''
                 boundary = int(math.ceil(float(len(NewReadyAMPList))/float(self.ExistNoOfCluster)))
                 CreateAMPGroup = [NewReadyAMPList[x:x+boundary] for x in range(0,len(NewReadyAMPList),boundary)]
-                print CreateAMPGroup
                 if (int(self.ExistNoOfCluster)*8-int(self.AMPCount)) == int(self.NewReadyAMPCount):
-                    ArrangedAmpGrp = self.AssignAmpToCluster(CreateAMPGroup,AvailableClusterList)
+                    ArrangedAmpGrp = self.AssignAmpToCluster(CreateAMPGroup,AvailableClusterList)   
                     AA_Command += self.CreateConfigAddAmpCommand(ArrangedAmpGrp, AvailableClusterList)
+                else:
+                    AA_Command += self.CreateConfigAddAmpCommand(CreateAMPGroup, AvailableClusterList)
+
             else:
                 '''
                 As the number of NewReady amps is much higher than the available cluster list and also every cluster
@@ -764,7 +770,16 @@ class CreateMAPInConfig(object):
             NoOfCluster = int(self.AMPCount)/AmpsInEachCluster
         
         self.CreateCommandForSpecificMaps(AmpsInEachCluster, NoOfCluster)
-            
+
+        del_fd = open(os.path.join(os.getcwd(),self.__LogDIR__,CreateMap_Log),"w")
+        del_fd.write(self.CreateMap_out)
+        del_fd.close()
+
+        if re.search(".*TD_Map(.*)saved.*" ,self.CreateMap_out):
+            return True
+        else:
+            return False    
+                    
     def CreateCommandForSpecificMaps(self, AmpsInEachCluster, NoOfCluster):
         '''
         This method will be used to create all possible types of maps.
@@ -897,14 +912,7 @@ class CreateMAPInConfig(object):
             else:
                 break
         self.ExecuteCommandForSpecificMaps(CreateMapCmd)                            
-        del_fd = open(os.path.join(os.getcwd(),self.__LogDIR__,CreateMap_Log),"w")
-        del_fd.write(self.CreateMap_out)
-        del_fd.close()
 
-        if re.search(".*TD_Map(.*)saved.*" ,self.CreateMap_out):
-            return True
-        else:
-            return False    
     
     def ExecuteCommandForSpecificMaps(self, CreateMapCmd):
         '''
@@ -1098,68 +1106,4 @@ class Reconfig(object):
         else:
             return False
 
-if __name__ == "__main__":
-#    rco = Reconfig("porthos1.labs.teradata.com","Reconfig")
-    rco = Reconfig("stratego","Reconfig")
-    rco.IsADDAmpReconfig("yes", "yes", "", "4", "Add_Reconfig_Log")
-    rco.IsLogicalChngReconfig("yes", "td_map1", "yes", "td_map1", "OnlyLRco_Log")
-    rco.IsAddCCReconfig("yes", "yes", "td_map1" ,"AddandCCRco_Log")
-    rco.IsCommonReconfig("yes", "td_map1", "CommonRco_Log")        
-            
-if __name__ == "__main__":
     
-#    print "\nConfig class"
-    first = CreateMAPInConfig("stratego","Config_Logs")
-#    first = CreateMAPInConfig("porthos1.labs.teradata.com","Config_Logs")
-#    first = CreateMAPInConfig("sdmhm001.labs.teradata.com","Config_Logs")
-    first = CreateMAPInConfig("porthos1.labs.teradata.com","Config_Logs")
-    first.CreateSpecificNoOfMaps(64,"log")
-#    first.MakeAMPDown("TD_MAP8","Down_amp_log")   
-#    first.DropMap("yes","")
-#    if first.DelampMAP(20,1,"del_amp_from_higher_log","yes") is False:
-#        print"\n DelAMP 1 Failed"
-#        sys.exit(0)
-#    if first.DelampMAP(20,1,"del_amp_from_higher_phy","no") is False:
-#        print"\n DelAMP 1_2 Failed"
-#        sys.exit(0)
-#    if first.DelampMAP(40,2,"del_amp_from_lower","no") is False:
-#        print"\n DelAMP 2 Failed"
-#        sys.exit(0)
-#    if first.DelampMAP(20,3,"del_amp_overlap","no") is False:
-#        print"\n DelAMP 3 Failed"
-#    first.AddAmpToNewCluster("add_t_n")
-#    first.AddAmpToExistingCluster("add_t_e")
-#    if first.AddAmpToExistingCluster("Add_to_exist_log") is False:
-#        print "\nAdd to existing cluster failed"
-#        sys.exit(0)
-#    if first.AddWithClusterChange(2,"Add_CC_Log") is False:
-#        print"\n Add with cluster change failed"
-#        sys.exit(0)
-#    if first.DelWithClusterChange(20,4,"Del_CC_Log") is False:
-#        print"\n Del qith cc failed"
-#        sys.exit(0)
-            
-        
-if __name__ == "__main__":
-
-    print "\n################################################\n# This script will run SYSINIT and DIP utility #\n################################################"
-
-    utl_obj = TDUtility("localhost","utility_Logs")
-
-    if utl_obj.Sysinit("sysinit_out","YES") is False:
-        print "Sysinit utility Failed."
-        sys.exit(0)    
-    else:
-        print "sysinit completed successfully"
-
-    if utl_obj.DIP("dip_out") is False:
-        print "DIP utility Failed."
-        sys.exit(0)
-    else:
-        print "DIP completed successfully"
-
-    print "\nScript completed,Bye!"
-    print "Log Directory :"+ os.path.join(os.getcwd(),utl_obj.__LogDIR__)
-
-    utl_obj.CheckTable("ALL TABLES","checktable_out")
-    utl_obj.ScanDisk("scandisk_out")
