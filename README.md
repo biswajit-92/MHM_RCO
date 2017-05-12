@@ -3,31 +3,31 @@ Feature test for MHM-Re/Config.
 Author  : BISWAJIT MAHARANA(BM186030)
 Created : 10/05/2017
 Purpose:  This is the test frame work we are going to use as part of feature testing of MHM-Re/Config.
-# Description   :  Below are allowed CONFIG changes(or Functions) in this script:
-#                   1.  Add_AMPs_to_exist
-#                   2.  Add_AMPs_to_New_Exist
-#                   3.  Add_AMPs_to_new
-#                   4.  Del_Mod_AMPs
-#                   5.  Delete_End_AMPs
-#                   6.  Delete_Begin_AMPs
-#                   7.  Overlap_Map
-#                   8. Random_MOD_AMPs
-#                   9. MOD_AMPs
-#                   10. Sys_Dict_MAP_change
-#                   11. Add_Mod_AMPs
-#                   12. Alter Table
-#                   13. Drop Maps
-#                   14. Create possible maps
-#                   15. MakeAMPDown
-
 
 # Files:
-+++++++++
 input.json: This contains the test cases which end user wants to run.
 MHM_RCO.py: This contains the python source code to execute the given tests.
 ParseInput.py: This contains the code which will parse the input.json file and pass commands to MHM_RCO file.
 
 # How to Run   : python ParseInput.py Input.json
+
+ Description   :  Below are allowed CONFIG changes(or Functions) in this script:
+                   1.  Add_AMPs_to_exist
+                   2.  Add_AMPs_to_New_Exist
+                   3.  Add_AMPs_to_new
+                   4.  Del_Mod_AMPs
+                   5.  Delete_End_AMPs
+                   6.  Delete_Begin_AMPs
+                   7.  Overlap_Map
+                   8. Random_MOD_AMPs
+                   9. MOD_AMPs
+                   10. Sys_Dict_MAP_change
+                   11. Add_Mod_AMPs
+                   12. Alter Table
+                   13. Drop Maps
+                   14. Create possible maps
+                   15. MakeAMPDown
+
 
 # Synopsis     
 #        Methods(MHM_RCO.py):
