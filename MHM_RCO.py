@@ -13,6 +13,8 @@ import sys
 import time
 import math
 import random
+from collections import Counter
+from random import shuffle
 from ParseInput import *
 from ParseInput import outdir
 
@@ -39,7 +41,7 @@ class TDUtility(object):
                 raise
 
 
-    def CheckDBSstate(self):
+    def _check_dbs_state(self):
         '''
         To check the state of DBS
         '''
@@ -65,7 +67,7 @@ class TDUtility(object):
             print "DBS is not coming up, please check"
             return False
         
-    def IsSystemQuiescent(self):
+    def _is_system_quiescent(self):
         '''
         To check whether the system is Quiescent or not.
         '''
@@ -81,9 +83,9 @@ class TDUtility(object):
             print "DBS is not coming up, please check"
             return False        
 
-    def CheckDBSstateForSYSINIT(self):
+    def _check_dbs_stateFor_sysinit(self):
         '''
-        To check the state of DBS for SYSINIT
+        To check the state of DBS for _sysinit
         '''
 
         clock = 10
@@ -94,24 +96,24 @@ class TDUtility(object):
         time.sleep(10)
         clock += 10
         if clock >= 150:
-            print "DBS is not in proper state to perform SYSINIT, please check"
+            print "DBS is not in proper state to perform _sysinit, please check"
             return False
         
-    def restartDBS(self, reason):
+    def _restart_dbs(self, reason):
         '''
         To restart the database
         '''
 
         subprocess.call("/usr/bin/tdsh "+self.__host+" '/usr/pde/bin/tpareset -f -y"+" "+ reason +" ' ",shell=True)
 
-    def RemoveGDO(self,reason="GDORemove"):
+    def _remove_GDO(self,reason="GDORemove"):
         '''
         To remove all the GDOs and recreate new ones.
         '''
-        if self.CheckDBSstate() != 1:
+        if self._check_dbs_state() != 1:
             print "Bringing Database down For GDO Removal"
             subprocess.call("/usr/bin/tdsh "+self.__host+" '/usr/pde/bin/tpareset -x -y"+" "+ reason +" ' ",shell=True)
-            if self.CheckDBSstate() == 1:
+            if self._check_dbs_state() == 1:
                 print "\n**************DBS State************** \nPDE state: DOWN/HARDSTOP"
                 time.sleep(5)
             
@@ -191,54 +193,54 @@ class TDUtility(object):
         
         print "\ntpa is going start.."
         subprocess.call("/usr/bin/tdsh "+self.__host+" '/usr/pde/bin/pcl -s  /etc/init.d/tpa start' ",shell=True)
-        if self.CheckDBSstate() == 0:
+        if self._check_dbs_state() == 0:
             return
         else:
-            print "\nThe system is not in a proper state to Perform Sysinit\nExiting"
+            print "\nThe system is not in a proper state to Perform _sysinit\nExiting"
             sys.exit(0)
             
         
-    def Sysinit(self,out_file,IsGDORemove="YES"):
+    def _sysinit(self,out_file,IsGDORemove="YES"):
         '''
-        To perform sysinit, returns false if fail.
+        To perform _sysinit, returns false if fail.
         '''
 
         if IsGDORemove == "YES" :
-            self.RemoveGDO()
+            self._remove_GDO()
         subprocess.call("/usr/bin/tdsh "+self.__host+" '/usr/pde/bin/ctl -first \"Start DBS=off; wr ;quit\"'",shell=True)
-        self.restartDBS("sysinit")
-        print "\n***********SYSINIT Started***********"       
+        self._restart_dbs("_sysinit")
+        print "\n***********_sysinit Started***********"       
         time.sleep(10) 
-        sys_output = os.popen("/usr/bin/tdsh "+self.__host+" '"+CNSRUN+" -utility sysinit -output -force -commands \"{yes} {no} {yes} {1} {yes}\" -nostop'").read()
+        sys_output = os.popen("/usr/bin/tdsh "+self.__host+" '"+CNSRUN+" -utility _sysinit -output -force -commands \"{yes} {no} {yes} {1} {yes}\" -nostop'").read()
         sys_fd = open(os.path.join(os.getcwd(),self.__LogDIR__,out_file),"w")
         sys_fd.write(sys_output)
         sys_fd.close()
-        if re.search(r"SYSINIT complete.",sys_output):
+        if re.search(r"_sysinit complete.",sys_output):
             return True
         else:
             return False
 
 
-    def DIP(self,out_file):
+    def _dip(self,out_file):
         '''
-        To perform DIP.
+        To perform _dip.
         '''
 
-        if self.CheckDBSstate() == 5:
-            print "\n**************DIP Started************"
-        dip_output = os.popen("/usr/bin/tdsh "+self.__host+" '"+CNSRUN+" -utility DIP -output -force -commands \"{dbc} {DIPALL} {y} {DIPACC} {n}\" -nostop'").read()
-        dip_fd = open(os.path.join(os.getcwd(),self.__LogDIR__,out_file),"w")
-        dip_fd.write(dip_output)
-        dip_fd.close()
-        if re.search(r"DIPACC is complete",dip_output):
+        if self._check_dbs_state() == 5:
+            print "\n**************_dip Started************"
+        _dip_output = os.popen("/usr/bin/tdsh "+self.__host+" '"+CNSRUN+" -utility _dip -output -force -commands \"{dbc} {_dipALL} {y} {_dipACC} {n}\" -nostop'").read()
+        _dip_fd = open(os.path.join(os.getcwd(),self.__LogDIR__,out_file),"w")
+        _dip_fd.write(_dip_output)
+        _dip_fd.close()
+        if re.search(r"_dipACC is complete",_dip_output):
             return True
         else: 
             return False
         
 
-    def CheckTable(self,table,out_file):
+    def _checktable(self,table,out_file):
         '''
-        To run checktable utility.
+        To run _checktable utility.
         '''
 #        cmd = "/usr/bin/tdsh "+self.__host+'/usr/pde/bin/pdestate -a | grep " Logons are disabled - The system is quiescent"'
 #        if subprocess.check_output(cmd, shell=True) == "" :
@@ -246,8 +248,8 @@ class TDUtility(object):
         dbsstate = os.popen("/usr/bin/tdsh "+self.__host+" '/usr/pde/bin/pdestate -a'").read()
         if re.search(r"Logons are enabled - The system is quiescent",dbsstate):
             os.system("/usr/bin/tdsh "+self.__node+'echo "disable logons"| /usr/pde/bin/cnscons')
-        print "\n***********Checktable Started*************"
-        chcktbl_out = os.popen("/usr/bin/tdsh "+self.__host+" '"+CNSRUN+" -utility checktable -output -force -commands \"{CHECK "+table+" AT LEVEL THREE IN PARALLEL PRIORITY=H ERROR ONLY;} {QUIT;}\" -nostop'").read()
+        print "\n***********_checktable Started*************"
+        chcktbl_out = os.popen("/usr/bin/tdsh "+self.__host+" '"+CNSRUN+" -utility _checktable -output -force -commands \"{CHECK "+table+" AT LEVEL THREE IN PARALLEL PRIORITY=H ERROR ONLY;} {QUIT;}\" -nostop'").read()
         chcktbl_fd = open(os.path.join(os.getcwd(),self.__LogDIR__,out_file),"w")
         chcktbl_fd.write(chcktbl_out)
         chcktbl_fd.close()
@@ -257,16 +259,16 @@ class TDUtility(object):
             return False
             
             
-    def ScanDisk(self,out_file):
+    def _scandisk(self,out_file):
         '''
-        To run Scandisk utility.
+        To run _scandisk utility.
         '''
-        print "\n**************Scandisk Started***********"
-        scandisk_out = os.popen("/usr/bin/tdsh "+self.__host+" '"+CNSRUN+" -utility ferret -output -force -prompt \"Ferret  ==>.*\" -commands \"{scandisk/y} {quit}\" -nostop'").read()
-        scandisk_fd = open(os.path.join(os.getcwd(),self.__LogDIR__,out_file),"w")
-        scandisk_fd.write(scandisk_out)
-        scandisk_fd.close()
-        if re.search(r"vprocs responded with no messages or errors",scandisk_out):
+        print "\n**************_scandisk Started***********"
+        _scandisk_out = os.popen("/usr/bin/tdsh "+self.__host+" '"+CNSRUN+" -utility ferret -output -force -prompt \"Ferret  ==>.*\" -commands \"{_scandisk/y} {quit}\" -nostop'").read()
+        _scandisk_fd = open(os.path.join(os.getcwd(),self.__LogDIR__,out_file),"w")
+        _scandisk_fd.write(_scandisk_out)
+        _scandisk_fd.close()
+        if re.search(r"vprocs responded with no messages or errors",_scandisk_out):
             return True
         else:
             return False
@@ -291,18 +293,19 @@ class CreateMAPInConfig(object):
         
         self.__host = system
         self.__LogDIR__ = path
-        self.TotalAMPCount = ''
-        self.MAPCOUNT = ''
-        self.OnlineAMPCount = ''
-        self.AMPCount = ''
-        self.NoOfDownAMP = ''
-        self.NewReadyAMPCount = ''
-        self.UsedMapSLotCount = ''
-        self.EndOnlineAMP = ''
-        self.MaxClusterSize = ''
-        self.HighestClusterNo = ''
-        self.AllDistinctCluster = ''
-        self.MinClusterSize = 2
+        self.amps_in_system = ''
+        self.map_count = ''
+        self.online_ampcnt = ''
+        self.t_amps_in_globalmap = ''
+        self.t_down_amp = ''
+        self.t_newR_amp = ''
+        self.used_slot = ''
+        self.end_onl_amp = ''
+        self.max_clustersize_in_system = ''
+        self.highest_clusterN = ''
+        self.all_dist_cluster = ''
+        self.min_cluster_size = 2
+        self.max_cluster_size = 8
          
         
         self.__LogDIR__ = os.path.join(outdir,self.__LogDIR__)
@@ -313,48 +316,48 @@ class CreateMAPInConfig(object):
                 raise
 
         
-        self.Config_Parameters()
+        self.config_parameters()
 
-    def Config_Parameters(self):
+    def config_parameters(self):
         '''
         This will be used to update the parameters used for creation of maps.
         '''
-        self.TotalAMPCount = os.popen("/usr/bin/tdsh "+self.__host+" '/usr/pde/bin/vconfig -x | egrep vprtype\.*1  | wc -l' ").read()
-        self.MAPCOUNT = os.popen( "/usr/bin/tdsh " +self.__host+ " '/usr/tdbms/bin/dmpgdo mapinfo | grep TD_* | wc -l' " ).read()
+        self.amps_in_system = os.popen("/usr/bin/tdsh "+self.__host+" '/usr/pde/bin/vconfig -x | egrep vprtype\.*1  | wc -l' ").read()
+        self.map_count = os.popen( "/usr/bin/tdsh " +self.__host+ " '/usr/tdbms/bin/dmpgdo mapinfo | grep TD_* | wc -l' " ).read()
 #        self.MapInDefinedState = 
-        self.OnlineAMPCount =  os.popen( "/usr/bin/tdsh " +self.__host+ " /usr/tdbms/bin/dmpgdo mapinfo | grep OnlineAmpCnt | head -n 1 | awk -F' ' '{print $3}'  " ).read()
-        self.AMPCount = os.popen( "/usr/bin/tdsh " +self.__host+ " /usr/tdbms/bin/dmpgdo mapinfo | grep AmpCnt | head -n 1 | awk -F' ' '{print $3}'  " ).read()
-        self.NoOfDownAMP = int(self.AMPCount) - int(self.OnlineAMPCount)
-        self.NewReadyAMPCount = int(self.TotalAMPCount) - int(self.AMPCount)
-        self.UsedMapSLotCount = int(self.MAPCOUNT)
-        self.EndOnlineAMP = os.popen( "/usr/bin/tdsh " +self.__host+ " /usr/tdbms/bin/dmpgdo dbsconfig 0| grep AMP | grep Online | tail -n 1| awk -F' ' '{print $1}' ").read()
-        self.ExistNoOfCluster = os.popen( "/usr/bin/tdsh " +self.__host+ " /usr/tdbms/bin/dmpgdo dbsconfig 0 | grep AMP | grep Online | awk -F' ' '{print $4}' | sort -nu | wc -l ").read()
-        self.MaxClusterSize = os.popen( "/usr/bin/tdsh " +self.__host+ " /usr/tdbms/bin/dmpgdo mapinfo | grep MaxClustersize | sort -n | tail -n 1 | awk -F ' ' '{print $3}' ").read()
-        self.HighestClusterNo = os.popen( "/usr/bin/tdsh " +self.__host+ " /usr/tdbms/bin/dmpgdo dbsconfig 0 | grep AMP | grep Online | awk -F' ' '{print $4}' | sort -nu | tail -n 1 ").read()
-        self.AllDistinctCluster = os.popen( "/usr/bin/tdsh "+self.__host+ " /usr/tdbms/bin/dmpgdo dbsconfig 0 | grep AMP | grep Online | awk -F' ' '{print $4}' | sort -nu ").read()
-        self.AllDistinctCluster = filter(None, list(map(str.strip,self.AllDistinctCluster)))
+        self.online_ampcnt =  os.popen( "/usr/bin/tdsh " +self.__host+ " /usr/tdbms/bin/dmpgdo mapinfo | grep OnlineAmpCnt | head -n 1 | awk -F' ' '{print $3}'  " ).read()
+        self.t_amps_in_globalmap = os.popen( "/usr/bin/tdsh " +self.__host+ " /usr/tdbms/bin/dmpgdo mapinfo | grep AmpCnt | head -n 1 | awk -F' ' '{print $3}'  " ).read()
+        self.t_down_amp = int(self.t_amps_in_globalmap) - int(self.online_ampcnt)
+        self.t_newR_amp = int(self.amps_in_system) - int(self.t_amps_in_globalmap)
+        self.used_slot = int(self.map_count)
+        self.end_onl_amp = os.popen( "/usr/bin/tdsh " +self.__host+ " /usr/tdbms/bin/dmpgdo dbsconfig 0| grep AMP | grep Online | tail -n 1| awk -F' ' '{print $1}' ").read()
+        self.exist_num_cluster = os.popen( "/usr/bin/tdsh " +self.__host+ " /usr/tdbms/bin/dmpgdo dbsconfig 0 | grep AMP | grep Online | awk -F' ' '{print $4}' | sort -nu | wc -l ").read()
+        self.max_clustersize_in_system = os.popen( "/usr/bin/tdsh " +self.__host+ " /usr/tdbms/bin/dmpgdo mapinfo | grep MaxClustersize | sort -n | tail -n 1 | awk -F ' ' '{print $3}' ").read()
+        self.highest_clusterN = os.popen( "/usr/bin/tdsh " +self.__host+ " /usr/tdbms/bin/dmpgdo dbsconfig 0 | grep AMP | grep Online | awk -F' ' '{print $4}' | sort -nu | tail -n 1 ").read()
+        self.all_dist_cluster = os.popen( "/usr/bin/tdsh "+self.__host+ " /usr/tdbms/bin/dmpgdo dbsconfig 0 | grep AMP | grep Online | awk -F' ' '{print $4}' | sort -nu ").read()
+        self.all_dist_cluster = filter(None, list(map(str.strip,self.all_dist_cluster)))
         #Debug prints
-#        print "\nTotalAMPCount: "+self.TotalAMPCount
-#        print "\nMAPCOUNT : "+self.MAPCOUNT
-#        print "\nDownAMPCount: "+str(self.NoOfDownAMP)
-#        print "\nOnlineAMPCount: "+self.OnlineAMPCount
-#        print "\nNewReadyAMPCount: "+str(self.NewReadyAMPCount)        
+#        print "\namps_in_system: "+self.amps_in_system
+#        print "\nmap_count : "+self.map_count
+#        print "\nDownt_amps_in_globalmap: "+str(self.t_down_amp)
+#        print "\nonline_ampcnt: "+self.online_ampcnt
+#        print "\nt_newR_amp: "+str(self.t_newR_amp)        
 
     
-    def IsClusterAssignmentGood(self):
+    def is_cluster_good(self):
         '''
         This function will be called to check whether the system is having good cluster arrangement or not
         @return: The function will return True if the clustering is good.
         '''
-        CheckCluster = os.popen("/usr/bin/tdsh "+self.__host+" /usr/tdbms/bin/dmpgdo dbsconfig 0 | grep AMP | grep Online |awk -F' ' '{print $4}' ").read()
-        cluster_temp = CheckCluster.split()
+        check_cluster = os.popen("/usr/bin/tdsh "+self.__host+" /usr/tdbms/bin/dmpgdo dbsconfig 0 | grep AMP | grep Online |awk -F' ' '{print $4}' ").read()
+        cluster_temp = check_cluster.split()
         print cluster_temp
         i = 0
         while i < len(cluster_temp)/2:
             if cluster_temp[i] < cluster_temp[i+1]:
                 if (cluster_temp[i] == cluster_temp[i-1] and i!=0):
                     i+=1
-                elif int(self.HighestClusterNo) ==  (int(self.OnlineAMPCount) / 2)-1:
+                elif int(self.highest_clusterN) ==  (int(self.online_ampcnt) / 2)-1:
                     return False
                     break
             else:
@@ -362,567 +365,715 @@ class CreateMAPInConfig(object):
 
         return True
     
+    def _validate_and_modify_amps_and_cluster(self, amps_p_cluster):
+        '''
+        This method will be used to check if the amps_per_cluster value is valid or not.
+        If valid then check the available amps and check is it possible to assign the amps evenly accross
+        the clusters or not.
+        Mainly called by _mod_amp and _mod_amp_with_shuffle_cluster methods.
+        @param amps_per_cluster: how many amps should be there in each cluster. If value not 
+        given then by default 2 amps/cluster.
+        Allowed amps_per_cluster values are between 2 to 4.
+        @return: available_amps: Final list of amps.  
+        '''
+        self.mod_amp_cmd = ''
+        self.amps_per_cluster = amps_p_cluster
+        available_amps = list(range(0,int(self.t_amps_in_globalmap)))
+        '''For now let's not allow the amps_per_cluster value to be more than 4 and less than 2.'''
+        if (self.amps_per_cluster > 4 or self.amps_per_cluster < 2):
+            self.amps_per_cluster = random.randint(2,4)
+        if self.amps_per_cluster == '':
+            self.amps_per_cluster = self.min_cluster_size
+            '''If the self.amps_per_cluster value is self.min_cluster_size then check if there can be an odd amp.
+            if we get an odd amp then randomly pick a cluster and place the last amp in that cluster'''
+            if len(available_amps)%self.min_cluster_size != 0:
+                last_amp_in_this_cl = random.randint(0,int(self.exist_num_cluster)-1)
+                self.mod_amp_cmd += " {ma %d,cn=%d}" %(int(available_amps[-1]), last_amp_in_this_cl)
+                available_amps.remove(available_amps[-1])
+        if len(available_amps)%self.amps_per_cluster != 0:
+            odd_amps_cnt = len(available_amps)%self.amps_per_cluster
+            '''If the odd amps count is less than the available cluster list then arrange those amps 
+            in the available clusters'''
+            if odd_amps_cnt <= len(self.all_dist_cluster):
+                odd_amps_list = random.sample(range(0,int(self.t_amps_in_globalmap)),odd_amps_cnt)
+                odd_amps_cluster = random.sample(range(0,len(self.all_dist_cluster)),odd_amps_cnt)
+                for index,i in enumerate(odd_amps_list):
+                    self.mod_amp_cmd += " {ma %d,cn=%d}" %(i, odd_amps_cluster[index])
+                    available_amps.remove(i)     
+        return available_amps    
+
+    def _cr_config_modamp_cmd(self, mod_cmd, amp_grp, cluster_list, log):
+        '''
+        This method will be called to create and execute the commands for mod amp config.
+        @param mod_cmd: If you already have some command string then you can pass it through this variable
+        so that it can be appended to the final mod amp command in this method.
+        @param amp_grp: Final list of amps going to be used in the command formation.
+        @param cluster_list: List of clusters going to be used for clustering.
+        @param log: Log file for this method.
+        '''
+        mod_amp_cmd = ''
+        mod_amp_cmd += mod_cmd
+        for index,ampgrp in enumerate(amp_grp):
+            for each_amp in ampgrp:
+                mod_amp_cmd += " {ma %d,cn=%d}" %(int(each_amp), int(cluster_list[index]))
+        mod_amp_cmd = "{bc}"+mod_amp_cmd+" {ec} {s}"
+        mod_amp_out = os.popen("/usr/bin/tdsh "+self.__host+" '"+CNSRUN+" -utility config -output -force -commands \""+mod_amp_cmd+"\"  -nostop'").read()
+        mod_amp_fd = open(os.path.join(os.getcwd(),self.__LogDIR__,log),"w")
+        mod_amp_fd.write(mod_amp_out)
+        mod_amp_fd.close()
+
+        if re.search(".*TD_Map(.*)saved.*" ,mod_amp_out):
+            return True
+        else:
+            return False         
     
-    def ChangeClusterWithFixedSize(self, dc_size, FixedMod_Log):
+    def _mod_amp(self, amps_per_cluster, mod_amp_log):
+        '''
+        This method will be called to perform mod amp config operation.
+        @param amps_per_cluster: The cluster arrangement will be done as per this value.
+        @param mod_amp_log: Log file for this method.
+        '''
+        available_amps = self._validate_and_modify_amps_and_cluster(amps_per_cluster)
+        create_amp_grp = [available_amps[x:x+self.amps_per_cluster] for x in range(0,len(available_amps),self.amps_per_cluster)]
+        cluster_list = list(range(0,len(create_amp_grp)))
+        self._cr_config_modamp_cmd('', create_amp_grp, cluster_list, mod_amp_log)
+        
+    def _mod_amp_with_shuffle_cluster(self,amps_per_cluster, mod_amp_shuffle_log):
+        '''
+        This method will be called to make cluster change in a shufflig manner. if in the current system all the 
+        cluster is having same no of amps then shuffle will maintain that cluster size.
+        @param amps_per_cluster: During shuffling how many amps should be there in each cluster. If value not 
+        given then by default 2 amps/cluster.
+        Allowed amps_per_cluster values are between 2 to 4.  
+        @param mod_amp_shuffle_log: Log file for this method.
+        what's an odd amp here?
+        A. if we divide the available amps with the available cluster list,the remainder we will get that's the
+        odd amp.
+        '''
+        mod_amp_shuffle_cmd = ''
+        available_amps = self._validate_and_modify_amps_and_cluster(amps_per_cluster)
+        mod_amp_shuffle_cmd += self.mod_amp_cmd
+        #let's shuffle the amps#
+        shuffle(available_amps)
+        create_amp_grp = [available_amps[x:x+self.amps_per_cluster] for x in range(0,len(available_amps),self.amps_per_cluster)]
+        cluster_list = list(range(0,len(create_amp_grp)))
+        self._cr_config_modamp_cmd(mod_amp_shuffle_cmd, create_amp_grp, cluster_list, mod_amp_shuffle_log)
+          
+    def _mod_amp_with_dc_cmd(self, dc_size, mod_log):
         '''
         This function will be called to make fixed cluster size arrangement in the configuration
         @param dc_size: The new cluster size
         '''
-        DC_Command = " {bc} {dc %d} {ec} {s}" %(dc_size)
-        print DC_Command
-        
-        Config_dc_output = os.popen("/usr/bin/tdsh "+self.__host+" '"+CNSRUN+" -utility config -output -force -commands \""+DC_Command+"\"  -nostop'").read()
-        dc_fd = open(os.path.join(os.getcwd(),self.__LogDIR__,FixedMod_Log),"w")
-        dc_fd.write(Config_dc_output)
+        '''
+        Let's check whether the cluster size we are getting is valid or not.
+        Check what is the most common cluster size of all available cluster and ignore that cluster in this method.
+        '''
+        possible_cluster_size = list(range(2,9))
+        cluster_size = []
+        for i in self.all_dist_cluster:
+            cluster_size.append(self._get_ampIn_cluster(str(i)))
+        count = Counter(cluster_size)
+        most_cluster_size = count.most_common(1)[0][0]
+        if int(most_cluster_size) == dc_size:
+            possible_cluster_size.remove(int(most_cluster_size))
+            dc_size = random.choice(possible_cluster_size)
+        dc_cmd = "{bc} {dc %d} {ec} {s}" %(int(dc_size))
+        dc_out = os.popen("/usr/bin/tdsh "+self.__host+" '"+CNSRUN+" -utility config -output -force -commands \""+dc_cmd+"\"  -nostop'").read()
+        dc_fd = open(os.path.join(os.getcwd(),self.__LogDIR__,mod_log),"w")
+        dc_fd.write(dc_out)
         dc_fd.close()
-        
-        if re.search(".*TD_Map(.*)saved.*" ,Config_dc_output):
+
+        if re.search(".*TD_Map(.*)saved.*" ,dc_out):
             return True
         else:
             return False
-                
-        
-    def AddWithClusterChange(self, cluster_size, AddWithCC_Log):
+
+    def _mod_amp_with_random_cluster(self, mod_amp_random_log):
+        '''
+        This method will be called to change the clustering of the current system with a random cluster size.
+        @param mod_amp_random_log: Log file of this method.
+        '''
+        self._mod_amp_with_dc_cmd(random.randint(2,8), mod_amp_random_log)
+
+    def _add_and_cc(self, cluster_size, add_cc_log):
         '''
         This function will be called to perform add amp along with cluster change.
         @param cluster_size: The new cluster size. 
         '''
-        Add_CC_Command = ''
-        NewReadyAMPList = list(range(int(self.AMPCount),int(self.TotalAMPCount)))
-        Add_CC_Command += "{aa %d-%d} " %(NewReadyAMPList[0], NewReadyAMPList[len(NewReadyAMPList)-1])
-        if (cluster_size != int(self.MaxClusterSize)):
-            Add_CC_Command += "{dc %d} " %(cluster_size)
+        add_cc_cmd = ''
+        new_amp_list = list(range(int(self.t_amps_in_globalmap),int(self.amps_in_system)))
+        add_cc_cmd += "{aa %d-%d} " %(new_amp_list[0], new_amp_list[len(new_amp_list)-1])
+        if (cluster_size != int(self.max_clustersize_in_system)):
+            add_cc_cmd += "{dc %d} " %(cluster_size)
         else:
-            Add_CC_Command += "{dc %d} " %(cluster_size+1)
-        Add_CC_Command = "{bc} "+Add_CC_Command+"{ec} {s}"
-        Add_cc_output = os.popen("/usr/bin/tdsh "+self.__host+" '"+CNSRUN+" -utility config -output -force -commands \""+Add_CC_Command+"\"  -nostop'").read()
-        aa_ex_fd = open(os.path.join(os.getcwd(),self.__LogDIR__,AddWithCC_Log),"w")
-        aa_ex_fd.write(Add_cc_output)
-        aa_ex_fd.close()
+            add_cc_cmd += "{dc %d} " %(cluster_size+1)
+        add_cc_cmd = "{bc} "+add_cc_cmd+"{ec} {s}"
+        add_cc_out = os.popen("/usr/bin/tdsh "+self.__host+" '"+CNSRUN+" -utility config -output -force -commands \""+add_cc_cmd+"\"  -nostop'").read()
+        add_cc_fd = open(os.path.join(os.getcwd(),self.__LogDIR__,add_cc_log),"w")
+        add_cc_fd.write(add_cc_out)
+        add_cc_fd.close()
         
-        if re.search(".*TD_Map(.*)saved.*" ,Add_cc_output):
+        if re.search(".*TD_Map(.*)saved.*" ,add_cc_out):
             return True
         else:
             return False    
         
-    def DelWithClusterChange(self, percentage, cluster_size, DelWithCC_Log):
+    def _del_and_cc(self, percentage, cluster_size, del_cc_log):
         '''
         This function will be called to perform del amp along with clster change.
         @param percentage: The percentage of amps the user wants to delete.
         @param cluster_size:  The new cluster size.
         '''
-        Del_cc_command = ''
-        del_amp_count = int(math.floor(percentage/100*int(self.OnlineAMPCount)))
-        amp_from_end = int(self.EndOnlineAMP) - del_amp_count +1
-        Del_cc_command += "{da %s-%s} " %(amp_from_end,self.EndOnlineAMP)
-        if (cluster_size != int(self.MaxClusterSize)):
-            Del_cc_command += "{dc %d} " %(cluster_size)
+        del_cc_cmd = ''
+        del_amp_count = int(math.floor(percentage/100*int(self.online_ampcnt)))
+        amp_from_end = int(self.end_onl_amp) - del_amp_count +1
+        del_cc_cmd += "{da %s-%s} " %(amp_from_end,self.end_onl_amp)
+        if (cluster_size != int(self.max_clustersize_in_system)):
+            del_cc_cmd += "{dc %d} " %(cluster_size)
         else:
-            Del_cc_command += "{dc %d} " %(cluster_size-1)
-        Del_cc_command = "{bc} "+Del_cc_command+"{ec} {s}"
-        Del_cc_output = os.popen("/usr/bin/tdsh "+self.__host+" '"+CNSRUN+" -utility config -output -force -commands \""+Del_cc_command+"\"  -nostop'").read()
-        aa_ex_fd = open(os.path.join(os.getcwd(),self.__LogDIR__,DelWithCC_Log),"w")
-        aa_ex_fd.write(Del_cc_output)
-        aa_ex_fd.close()
+            del_cc_cmd += "{dc %d} " %(cluster_size-1)
+        del_cc_cmd = "{bc} "+del_cc_cmd+"{ec} {s}"
+        del_cc_out = os.popen("/usr/bin/tdsh "+self.__host+" '"+CNSRUN+" -utility config -output -force -commands \""+del_cc_cmd+"\"  -nostop'").read()
+        del_cc_fd = open(os.path.join(os.getcwd(),self.__LogDIR__,del_cc_log),"w")
+        del_cc_fd.write(del_cc_out)
+        del_cc_fd.close()
         
-        if re.search(".*TD_Map(.*)saved.*" ,Del_cc_output):
+        if re.search(".*TD_Map(.*)saved.*" ,del_cc_out):
             return True
         else:
             return False    
                 
         
-    def CreateConfigAddAmpCommand(self, CreateAMPGroup, AvailableClusterList):
+    def _cr_config_aa_cmd(self, create_amp_grp, avail_cl_list):
         '''
         This method will be called to create a command which will be given to config utility to create a map for add amp operation.
-        @param CreateAMPGroup: List having all the required amps.
-        @param AvailableClusterList: List of all the required clusters.
-        @return: The config command which involves the AmpGroup and AvailableClusterList.
+        @param create_amp_grp: List having all the required amps.
+        @param avail_cl_list: List of all the required clusters.
+        @return: The config command which involves the amp_grp and avail_cl_list.
         '''
-        Command = ''
-        for i in range(len(CreateAMPGroup)):
-            if CreateAMPGroup[i][0] == CreateAMPGroup[i][len(CreateAMPGroup[i])-1] :
-                Command += " {aa %d,cn=%d}" %(CreateAMPGroup[i][0], int(AvailableClusterList[i]))   #only a single amp is available to add in the command
+        config_cmd = ''
+        for i in range(len(create_amp_grp)):
+            if create_amp_grp[i][0] == create_amp_grp[i][len(create_amp_grp[i])-1] :
+                config_cmd += " {aa %d,cn=%d}" %(create_amp_grp[i][0], int(avail_cl_list[i]))   #only a single amp is available to add in the command
             else:
-                Command += " {aa %d-%d,cn=%d}" %(CreateAMPGroup[i][0], CreateAMPGroup[i][len(CreateAMPGroup[i])-1], int(AvailableClusterList[i])) #This creates contiguous amp command
+                config_cmd += " {aa %d-%d,cn=%d}" %(create_amp_grp[i][0], create_amp_grp[i][len(create_amp_grp[i])-1], int(avail_cl_list[i])) #This creates contiguous amp command
                  
-        return Command
+        return config_cmd
     
-    def GetNoOfAmpsInCluster(self, ClusterNo):
+    def _get_ampIn_cluster(self, cluster_no):
         '''
         This method will be used to get the no of online amps in the given cluster.
         @return: The no of amps in the given cluster.
         '''
-        return (os.popen( "/usr/bin/tdsh " +self.__host+ " /usr/tdbms/bin/dmpgdo dbsconfig 0 | grep AMP | grep Online | awk -F' ' '{print $4}' | sort -n | grep -w '"+ClusterNo+"' | wc -l ").read()).strip()
+        return (os.popen( "/usr/bin/tdsh " +self.__host+ " /usr/tdbms/bin/dmpgdo dbsconfig 0 | grep AMP | grep Online | awk -F' ' '{print $4}' | sort -n | grep -w '"+cluster_no+"' | wc -l ").read()).strip()
         
-    def AssignAmpToCluster(self, AmpGroup, ClusterList):
+    def _assign_ampTo_cluster(self, new_amps, sorted_cluster):
         '''
         This method will be called when we have to decide which group of amps will go to which cluster.
         We have all the amps which we have to add to the existing clusters, but it is very much necessary to know
         which cluster contains how many amps, so that we can add the groups of amps to correct cluster.
-        Fucntion receives the actual copy of the AmpGroup,ClusterList
-        
-        @param AmpGroup:  This is the Group of NewReady amps to be allocated to a specific cluster.(existing/new)
-        @param ClusterList: List contains valid cluster numbers for the amps.
+        Fucntion receives the actual copy of the AmpGroup,sorted_cluster
+
+        @param new_amps:  all the NewReady amps.
+        @param sorted_cluster: List contains valid cluster numbers for the amps.
         '''
-        print AmpGroup,ClusterList
-        TempClusterList = ClusterList[:]
-        if len(AmpGroup) != len(ClusterList):
-            return False
-        
         '''
         if all the NewReady amps can be accomodated to NoOfAvailableCluster*8 then check the ampgroup is proper or not.
         Ex:
         if cluster 0 is having 3 amps, then the ampgroup for cluster 0 must have 5 NewReady amps,
         if not then below if condition will arrange the ampgroups and return it to the calling method.
-        
+
         '''
-        if (int(self.ExistNoOfCluster)*8-int(self.AMPCount)) == int(self.NewReadyAMPCount):
-            for index,i in enumerate(ClusterList):
-                if (8-int(self.GetNoOfAmpsInCluster(i))) != len(AmpGroup[index]):
-                    k = int(self.GetNoOfAmpsInCluster(i))
-                    if (8-k < len(AmpGroup[index])):
-                        while(8-k < len(AmpGroup[index])):
-                            AmpGroup[index+1].insert(0,AmpGroup[index][8-k])
-                            del AmpGroup[index][8-k]
-                    else:
-                        while(k > len(AmpGroup[index])):
-                            AmpGroup[index].append(AmpGroup[index+1][0])
-                            del AmpGroup[index+1][0]
-                else:
-                    continue
-            return AmpGroup
-        
-            '''
-            if you have the required no of ampgroups correspondent to no of clusters but the ampgroups for the clusters aren't really
-            correct.
-            Ex:
-            if cluster 0 is having 3 amps and the ampgroup correspondent to it is having 4 amps then, search the required ampgroup
-            from the list and assign cluster 0 to it. make the arrangements accordingly and return the cluster list.
-            ''' 
-        else:
-            for i in ClusterList:
-                for index,j in enumerate(AmpGroup):
-                    if int(self.GetNoOfAmpsInCluster(i)) == 8-len(j):
-                        TempClusterList[index]=i
-                        break
-                    else:
-                        continue
-            return TempClusterList
+        get_cl_len = []
+        can_get_amp = []
+        amp_group = []
+        cluster_copy = sorted_cluster[:]
+        #assuming that we have all cluster and all online amp values#
+        available_cl = list(range(0,int(self.end_onl_amp)+1))
+        for i in cluster_copy:
+            get_cl_len.append(int(self._get_ampIn_cluster(i))) #Get the no of amps present in all clusters serially.
+        for i in get_cl_len:
+            can_get_amp.append(8-int(i))  #This list contains how many amps can be adjusted in cluster_copy.
+        for i in can_get_amp:
+            amp_group.append(new_amps[:i])
+            del new_amps[0:i]
+
+        return amp_group
                       
-    def AddAmpToExistingCluster(self, AddExist_Log):
+    def _aa_to_exist_cluster(self, startf_this_amp, end_at_this_amp, add_exi_log):
         '''
-        This function will be called to add NewReady amps to the existing clusters
+        This function will be called to add NewReady amps to the existing clusters.
+        @param startf_this_amp: If it's a valid amp no then start adding NewReady amps from this amp.
+        @param end_at_this_amp: This is only valid with a startf_this_amp value. Consider NewReady amps between 
+        startf_this_amp and end_at_this_amp boundary.
+        if end_at_this_amp is empty string then add amps till the last NewReady amp.
         '''
-        AA_Command = ''
-        NewReadyAMPList = list(range(int(self.AMPCount),int(self.TotalAMPCount)))
-        AvailableClusterList = list(self.AllDistinctCluster)
+        add_exi_cmd = ''
+        if startf_this_amp != '':
+            if end_at_this_amp != '':
+                new_amp_list = list(range(int(startf_this_amp),int(end_at_this_amp)+1))
+            else:
+                new_amp_list = list(range(int(startf_this_amp),int(self.amps_in_system)))
+        elif startf_this_amp == '':
+            new_amp_list = list(range(int(self.t_amps_in_globalmap),int(self.amps_in_system)))
+        avail_cl_list = list(self.all_dist_cluster)
+        sorted_avail_cl = sorted(avail_cl_list)
 
-        if int(self.ExistNoOfCluster) <= int(self.NewReadyAMPCount):
+        if int(self.exist_num_cluster) <= int(self.t_newR_amp):
 
-            if (int(self.ExistNoOfCluster)*8-int(self.AMPCount)) >= int(self.NewReadyAMPCount):
+            if (int(self.exist_num_cluster)*8-int(self.t_amps_in_globalmap)) >= int(self.t_newR_amp):
                 '''
                 The number of NewReady amps are less than the max number of amps that can accomodate the available cluster.
                 '''
-                boundary = int(math.ceil(float(len(NewReadyAMPList))/float(self.ExistNoOfCluster)))
-                CreateAMPGroup = [NewReadyAMPList[x:x+boundary] for x in range(0,len(NewReadyAMPList),boundary)]
-                if (int(self.ExistNoOfCluster)*8-int(self.AMPCount)) == int(self.NewReadyAMPCount):
-                    ArrangedAmpGrp = self.AssignAmpToCluster(CreateAMPGroup,AvailableClusterList)   
-                    AA_Command += self.CreateConfigAddAmpCommand(ArrangedAmpGrp, AvailableClusterList)
+                boundary = int(math.ceil(float(len(new_amp_list))/float(self.exist_num_cluster)))
+                create_amp_grp = [new_amp_list[x:x+boundary] for x in range(0,len(new_amp_list),boundary)]
+                if (int(self.exist_num_cluster)*8-int(self.t_amps_in_globalmap)) == int(self.t_newR_amp):
+                    arranged_amp_grp = self._assign_ampTo_cluster(new_amp_list, sorted_avail_cl)
+                    add_exi_cmd += self._cr_config_aa_cmd(arranged_amp_grp, sorted_avail_cl)
                 else:
-                    AA_Command += self.CreateConfigAddAmpCommand(CreateAMPGroup, AvailableClusterList)
-
+                    add_exi_cmd += self._cr_config_aa_cmd(create_amp_grp, avail_cl_list)
             else:
                 '''
                 As the number of NewReady amps is much higher than the available cluster list and also every cluster
                 can have max 8 amps,so we will add few of the NewReady amps to existing cluster and rest of them to new cluster.
                 '''
-                AddToExistingClAmp = list(range(int(self.EndOnlineAMP)+1,int(self.EndOnlineAMP)+1+int(self.ExistNoOfCluster)*8-int(self.AMPCount)))
-                GetTheLastAmp = AddToExistingClAmp[-1]
-                boundary = int(math.ceil(float(len(AddToExistingClAmp))/float(self.ExistNoOfCluster)))
-                CreateAMPGroup = [AddToExistingClAmp[x:x+boundary] for x in range(0,len(AddToExistingClAmp),boundary)]
-#                ArrangedCluster = self.MappingAmpToCluster(sorted(CreateAMPGroup, key=len),AvailableClusterList)
-                ArrangedCluster = self.AssignAmpToCluster(CreateAMPGroup,AvailableClusterList)
-                AA_Command += self.CreateConfigAddAmpCommand(CreateAMPGroup, ArrangedCluster) #which contains the command for adding NewReady amps to existing cluster.
+                add_to_exi_amp = list(range(int(self.EndOnlineAMP)+1,int(self.EndOnlineAMP)+1+int(self.exist_num_cluster)*8-int(self.t_amps_in_globalmap)))
+                get_last_amp = add_to_exi_amp[-1]
+                arranged_amp_grp = self._assign_ampTo_cluster(add_to_exi_amp, sorted_avail_cl)
+                add_exi_cmd += self._cr_config_aa_cmd(arranged_amp_grp, sorted_avail_cl)
+                self._aa_to_new_cluster(get_last_amp,'', "Add_Amp_Log")
 
         else:
             '''
             The number of clusters are more than the number of NewReady amps, so add all the amps to the exisiting cluster.
             '''
-            boundary = int(math.ceil(float(self.NewReadyAMPCount)/float(self.MinClusterSize)))
-            NewClusterList = list(range(0,boundary+1))
-            NewClusterList.sort()
-            CreateAMPGroup = [NewReadyAMPList[x:x+boundary] for x in range(0,len(NewReadyAMPList),boundary)]
-            AA_Command += self.CreateConfigAddAmpCommand(CreateAMPGroup, NewClusterList)
+            boundary = int(math.ceil(float(self.t_newR_amp)/float(self.min_cluster_size)))
+            new_cluster_list = list(range(0,boundary+1))
+            new_cluster_list.sort()
+            create_amp_grp = [new_amp_list[x:x+boundary] for x in range(0,len(new_amp_list),boundary)]
+            add_exi_cmd += self._cr_config_aa_cmd(create_amp_grp, new_cluster_list)
 
-        AA_Command = "{bc}"+AA_Command+" {ec} {s}"
+        add_exi_cmd = "{bc}"+add_exi_cmd+" {ec} {s}"
+        add_exi_out = os.popen("/usr/bin/tdsh "+self.__host+" '"+CNSRUN+" -utility config -output -force -commands \""+add_exi_cmd+"\"  -nostop'").read()
+        add_exi_fd = open(os.path.join(os.getcwd(),self.__LogDIR__,add_exi_log),"w")
+        add_exi_fd.write(add_exi_out)
+        add_exi_fd.close()
 
-        Config_aa_ex_output = os.popen("/usr/bin/tdsh "+self.__host+" '"+CNSRUN+" -utility config -output -force -commands \""+AA_Command+"\"  -nostop'").read()
-        aa_ex_fd = open(os.path.join(os.getcwd(),self.__LogDIR__,AddExist_Log),"w")
-        aa_ex_fd.write(Config_aa_ex_output)
-        aa_ex_fd.close()
-
-        if re.search(".*TD_Map(.*)saved.*" ,Config_aa_ex_output):
+        if re.search(".*TD_Map(.*)saved.*" ,add_exi_out):
             return True
-            self.AddAmpToNewCluster(GetTheLastAmp, "Add_Amp_Log")
         else:
             return False
-
         
-    def AddAmpToNewCluster(self, StartFromThisAmp, AddNew_Log):
+    def _aa_to_existandnew_cluster(self, add_existandnew_log):
+        '''
+        This method will be used to add amps to both existing and new cluster.
+        @param add_existandnew_log: It stores the logs.
+        '''
+        new_amp_list = list(range(int(self.t_amps_in_globalmap), int(self.amps_in_system)))
+        ''' we want to divide the amps equally for existing and new clusters,if the no of new amps is odd then
+        add the last amp to an existing cluster
+        ''' 
+        if (int(self.t_newR_amp)%self.min_cluster_size) != 0:
+            last_new_amp = os.popen( "/usr/bin/tdsh "+self.__host+ " /usr/tdbms/bin/dmpgdo dbsconfig 0 | grep AMP | grep NewReady | tail -n 1| awk -F' ' '{print $1}' ").read()
+            new_amp_list.remove(int(last_new_amp))
+        add_to_existing_list = list(range(int(self.end_onl_amp)+1,int(self.end_onl_amp)+int(len(new_amp_list)/2)+1))
+        add_to_new_list = list(range(int(add_to_existing_list[-1])+1, int(new_amp_list[-1])+1))
+        self._aa_to_new_cluster(add_to_new_list[0],'', add_existandnew_log)                             
+        self._aa_to_exist_cluster(add_to_existing_list[0], add_to_existing_list[-1], add_existandnew_log)
+        
+    def _aa_to_new_cluster(self, startf_this_amp, end_at_this_amp, add_new_log):
         '''
         This function will be called to add NewReady amps to New Cluster
-        @param StartFromThisAmp: If it's a valid amp no then start adding NewReady amps from this amp.
+        @param startf_this_amp: If it's a valid amp no then start adding NewReady amps from this amp.
+        @param end_at_this_amp: This is only valid with a startf_this_amp value. Consider NewReady amps between 
+        startf_this_amp and end_at_this_amp boundary.
+        if end_at_this_amp is empty string then add amps till the last NewReady amp.
         '''
-        AaToNewCommand = ''
-        if (StartFromThisAmp != ''):
-            NewReadyAMPList = list(range(StartFromThisAmp+1, int(self.TotalAMPCount)))
-        else:
-            NewReadyAMPList = list(range(int(self.AMPCount), int(self.TotalAMPCount)))
-
-        if (int(self.NewReadyAMPCount)%self.MinClusterSize) != 0:
-            boundary = int((self.NewReadyAMPCount-1)/((self.NewReadyAMPCount-1)/self.MinClusterSize))
-            NewClusterList = list(range(int(self.HighestClusterNo)+1,int(self.HighestClusterNo)+1+int((self.NewReadyAMPCount-1)/self.MinClusterSize)))
-            NewClusterList.sort()
-            LastNewReadyAMP = os.popen( "/usr/bin/tdsh "+self.__host+ " /usr/tdbms/bin/dmpgdo dbsconfig 0 | grep AMP | grep NewReady | tail -n 1| awk -F' ' '{print $1}' ").read()
-            LastAmpInCluster = random.randint(0,int(self.ExistNoOfCluster)-1)
-            AaToNewCommand += " {aa %d,cn=%d}" %(int(LastNewReadyAMP), LastAmpInCluster)
-            NewReadyAMPList.remove(int(LastNewReadyAMP))
-            if len(NewReadyAMPList) == 2:
-                AaToNewCommand += " {aa %d-%d,cn=%d}" %(NewReadyAMPList[0], NewReadyAMPList[1], NewClusterList[0])
+        add_new_cmd = ''
+        if (startf_this_amp != ''):
+            if end_at_this_amp != '':
+                new_amp_list = list(range(int(startf_this_amp),int(end_at_this_amp)+1))
             else:
-                CreateAMPGroup = [NewReadyAMPList[x:x+boundary] for x in range(0,len(NewReadyAMPList),boundary)]
-                for i in range(len(CreateAMPGroup)):
-                    if CreateAMPGroup[i][0] == CreateAMPGroup[i][len(CreateAMPGroup[i])-1] :
-                        AaToNewCommand += " {aa %d,cn=%d}" %(CreateAMPGroup[i][0], NewClusterList[i])
+                new_amp_list = list(range(startf_this_amp, int(self.amps_in_system)))
+        elif startf_this_amp == '':
+            new_amp_list = list(range(int(self.t_amps_in_globalmap), int(self.amps_in_system)))
+
+        if (len(new_amp_list)%self.min_cluster_size) != 0:
+            boundary = int((self.t_newR_amp-1)/((self.t_newR_amp-1)/self.min_cluster_size))
+            new_cluster_list = list(range(int(self.highest_clusterN)+1,int(self.highest_clusterN)+1+int((self.t_newR_amp-1)/self.min_cluster_size)))
+            new_cluster_list.sort()
+            last_new_amp = os.popen( "/usr/bin/tdsh "+self.__host+ " /usr/tdbms/bin/dmpgdo dbsconfig 0 | grep AMP | grep NewReady | tail -n 1| awk -F' ' '{print $1}' ").read()
+            last_amp_in_this_cl = random.randint(0,int(self.exist_num_cluster)-1)
+            add_new_cmd += " {aa %d,cn=%d}" %(int(last_new_amp), last_amp_in_this_cl)
+            new_amp_list.remove(int(last_new_amp))
+            if len(new_amp_list) == 2:
+                add_new_cmd += " {aa %d-%d,cn=%d}" %(new_amp_list[0], new_amp_list[1], new_cluster_list[0])
+            else:
+                create_amp_grp = [new_amp_list[x:x+boundary] for x in range(0,len(new_amp_list),boundary)]
+                for i in range(len(create_amp_grp)):
+                    if create_amp_grp[i][0] == create_amp_grp[i][len(create_amp_grp[i])-1] :
+                        add_new_cmd += " {aa %d,cn=%d}" %(create_amp_grp[i][0], new_cluster_list[i])
                     else:
-                        AaToNewCommand += " {aa %d-%d,cn=%d}" %(CreateAMPGroup[i][0], CreateAMPGroup[i][len(CreateAMPGroup[i])-1], NewClusterList[i])
+                        add_new_cmd += " {aa %d-%d,cn=%d}" %(create_amp_grp[i][0], create_amp_grp[i][len(create_amp_grp[i])-1], new_cluster_list[i])
 
         else:
-            NoOfNewCluster = int(int(self.NewReadyAMPCount)/self.MinClusterSize)
-            boundary = int(int(self.NewReadyAMPCount)/NoOfNewCluster)
-            NewClusterList = list(range(int(self.HighestClusterNo)+1,int(self.HighestClusterNo)+NoOfNewCluster+1))
-            CreateAMPGroup = [NewReadyAMPList[x:x+boundary] for x in range(0,len(NewReadyAMPList),boundary)]
-            for i in range(len(CreateAMPGroup)):
-                if CreateAMPGroup[i][0] == CreateAMPGroup[i][len(CreateAMPGroup[i])-1] :
-                    AaToNewCommand += " {aa %d,cn=%d}" %(CreateAMPGroup[i][0], NewClusterList[i])
+            no_of_new_cl = int(int(self.t_newR_amp)/self.min_cluster_size)
+            boundary = int(int(self.t_newR_amp)/no_of_new_cl)
+            new_cluster_list = list(range(int(self.highest_clusterN)+1,int(self.highest_clusterN)+no_of_new_cl+1))
+            create_amp_grp = [new_amp_list[x:x+boundary] for x in range(0,len(new_amp_list),boundary)]
+            for i in range(len(create_amp_grp)):
+                if create_amp_grp[i][0] == create_amp_grp[i][len(create_amp_grp[i])-1] :
+                    add_new_cmd += " {aa %d,cn=%d}" %(create_amp_grp[i][0], new_cluster_list[i])
                 else:
-                    AaToNewCommand += " {aa %d-%d,cn=%d}" %(CreateAMPGroup[i][0], CreateAMPGroup[i][len(CreateAMPGroup[i])-1], NewClusterList[i])
+                    add_new_cmd += " {aa %d-%d,cn=%d}" %(create_amp_grp[i][0], create_amp_grp[i][len(create_amp_grp[i])-1], new_cluster_list[i])
 
-        AaToNewCommand = "{bc}"+AaToNewCommand+" {ec} {s}"
-        Config_aa_new_output = os.popen("/usr/bin/tdsh "+self.__host+" '"+CNSRUN+" -utility config -output -force -commands \""+AaToNewCommand+"\"  -nostop'").read()
-        aa_new_fd = open(os.path.join(os.getcwd(),self.__LogDIR__,AddNew_Log),"w")
-        aa_new_fd.write(Config_aa_new_output)
-        aa_new_fd.close()
+        add_new_cmd = "{bc}"+add_new_cmd+" {ec} {s}"
+        add_new_out = os.popen("/usr/bin/tdsh "+self.__host+" '"+CNSRUN+" -utility config -output -force -commands \""+add_new_cmd+"\"  -nostop'").read()
+        add_new_fd = open(os.path.join(os.getcwd(),self.__LogDIR__,add_new_log),"w")
+        add_new_fd.write(add_new_out)
+        add_new_fd.close()
 
-        if re.search(".*TD_Map(.*)saved.*" ,Config_aa_new_output):
+        if re.search(".*TD_Map(.*)saved.*" ,add_new_out):
             return True
         else:
             return False
             
         
-    def DelampMAP(self, PercentageMode, Type, Config_del_Log, IsPhysical = 'no'):
+    def _del_amp_map(self, percentage, op_type, del_amp_log, is_physical = 'no'):
         '''
         This will be used whenever we want to create a map with Delete amp operation
         
-        @param Type: 
+        @param op_type: 
         1: Delete from the higher End(From highest AMP Vproc)
         2: Delete from the lower End(From AMP 0)
         3: Overlap
         
-        @param PercentageMode:
+        @param percentage:
         The no of AMP deletion depends on the percentage
         
-        @param IsPhysical: 
+        @param is_physical: 
         Whether you want to delete it physically or not
         '''
-        DA_Command = ''
-        del_amp_count = int(math.floor(PercentageMode/100*int(self.OnlineAMPCount)))
-        amp_from_end = int(self.EndOnlineAMP) - del_amp_count +1
+        del_amp_cmd = ''
+        del_amp_count = int(math.floor(percentage/100*int(self.online_ampcnt)))
+        amp_from_end = int(self.end_onl_amp) - del_amp_count +1
         amp_from_start = del_amp_count-1
-        if (Type == 1 and  (IsPhysical.lower() == 'no' or IsPhysical.lower() == 'n' )):
-            DA_Command = " {bc} {da %s-%s} {ec} {no} {s} " %(amp_from_end,self.EndOnlineAMP.strip())
+        if (op_type == 1 and  (is_physical.lower() == 'no' or is_physical.lower() == 'n' )):
+            del_amp_cmd = " {bc} {da %s-%s} {ec} {no} {s} " %(amp_from_end,self.end_onl_amp.strip())
 
-        elif (Type == 1 and  (IsPhysical.lower() == 'yes' or IsPhysical.lower() == 'y' )):
-            DA_Command = " {bc} {da %s-%s} {ec} {yes} {s}" %(amp_from_end,self.EndOnlineAMP.strip())
+        elif (op_type == 1 and  (is_physical.lower() == 'yes' or is_physical.lower() == 'y' )):
+            del_amp_cmd = " {bc} {da %s-%s} {ec} {yes} {s}" %(amp_from_end,self.end_onl_amp.strip())
 
-        elif Type == 2:
-            DA_Command =  " {bc} {da 0-%s} {ec} {s}" %(amp_from_start)
+        elif op_type == 2:
+            del_amp_cmd =  " {bc} {da 0-%s} {ec} {s}" %(amp_from_start)
 
-        elif Type == 3:
-            DA_Command = "{bc} {da 0-%s} {da %s-%s} {ec} {s}" %(amp_from_start,amp_from_end,self.EndOnlineAMP.strip())
+        elif op_type == 3:
+            del_amp_cmd = "{bc} {da 0-%s} {da %s-%s} {ec} {s}" %(amp_from_start,amp_from_end,self.end_onl_amp.strip())
 
         else:
             print "\nWrong config command.Please check the command"
-#        print DA_Command
 
-#        Config_del_output = os.popen("/usr/bin/tdsh "+self.__host+" '"+CNSRUN+" -utility config -output -force -commands \""+DA_Command+"\"  -nostop'").read()
-        cmd = "/usr/bin/tdsh "+self.__host+" '"+CNSRUN+" -utility config -output -force -commands \""+DA_Command+"\"  -nostop'"
+        cmd = "/usr/bin/tdsh "+self.__host+" '"+CNSRUN+" -utility config -output -force -commands \""+del_amp_cmd+"\"  -nostop'"
 
-        Config_del_output = os.popen(cmd).read()
-        del_fd = open(os.path.join(os.getcwd(),self.__LogDIR__,Config_del_Log),"w")
-        del_fd.write(Config_del_output)
-        del_fd.close()
+        del_amp_out = os.popen(cmd).read()
+        del_amp_fd = open(os.path.join(os.getcwd(),self.__LogDIR__,del_amp_log),"w")
+        del_amp_fd.write(del_amp_out)
+        del_amp_fd.close()
 
-        self.Config_Parameters()
 
-        if re.search(".*TD_Map(.*)saved.*" ,Config_del_output):
+        if re.search(".*TD_Map(.*)saved.*" ,del_amp_out):
             return True
         else:
             return False
 
             
-    def MakeAMPDown(self, MapName, DownAMP_Log):
+    def _make_amp_down(self, map_name, down_amp_log):
         '''
         To make an AMP Down in the given MAP
-        @param MapName: In this map the method will make one amp down.
+        @param map_name: In this map the method will make one amp down.
         '''
-        DownAMPCmd = ''
-        print DownAMPCmd
-        MapSlotOfMap = os.popen( "/usr/bin/tdsh "+self.__host+" /usr/tdbms/bin/dmpgdo mapinfo | grep -A 3 "+MapName+" | grep MapSlot | awk -F' ' '{print $3}' " ).read()
-        MapSlotOfMap = MapSlotOfMap.strip()
-        StartAMPInMap = os.popen( "/usr/bin/tdsh "+self.__host+" /usr/tdbms/bin/dmpgdo dbsconfig "+MapSlotOfMap+" | grep AMP | head -n 1 | awk -F' ' '{print $1}' ").read()
-        StartAMPInMap = StartAMPInMap.strip()
-        EndAMPInMap = os.popen( "/usr/bin/tdsh " +self.__host+ " /usr/tdbms/bin/dmpgdo dbsconfig "+MapSlotOfMap+" | grep AMP | tail -n 1 | awk -F' ' '{print $1}' ").read()
-        EndAMPInMap = EndAMPInMap.strip()
-        MakeThisDown = random.randint(int(StartAMPInMap),int(EndAMPInMap))
-        DownAMPCmd += "{set %d offline}" %(MakeThisDown)
-        DownAMPCmd += " {RESTART COLDWAIT DOWN} {YES}"
+        down_amp_cmd = ''
+        mapslot_of_map = os.popen( "/usr/bin/tdsh "+self.__host+" /usr/tdbms/bin/dmpgdo mapinfo | grep -A 3 "+map_name+" | grep MapSlot | awk -F' ' '{print $3}' " ).read()
+        mapslot_of_map = mapslot_of_map.strip()
+        startamp_in_map = os.popen( "/usr/bin/tdsh "+self.__host+" /usr/tdbms/bin/dmpgdo dbsconfig "+mapslot_of_map+" | grep AMP | head -n 1 | awk -F' ' '{print $1}' ").read()
+        startamp_in_map = startamp_in_map.strip()
+        endamp_in_map = os.popen( "/usr/bin/tdsh " +self.__host+ " /usr/tdbms/bin/dmpgdo dbsconfig "+mapslot_of_map+" | grep AMP | tail -n 1 | awk -F' ' '{print $1}' ").read()
+        endamp_in_map = endamp_in_map.strip()
+        make_this_down = random.randint(int(startamp_in_map),int(endamp_in_map))
+        down_amp_cmd += "{set %d offline}" %(make_this_down)
+        down_amp_cmd += " {RESTART COLDWAIT DOWN} {YES}"
 
-        DownAMP_Output = os.popen("/usr/bin/tdsh "+self.__host+" '"+CNSRUN+" -utility vprocmanager -output -force -commands \""+DownAMPCmd+"\"  -nostop'").read()
-        downamp_fd = open(os.path.join(os.getcwd(),self.__LogDIR__,DownAMP_Log),"w")
-        downamp_fd.write(DownAMP_Output)
-        downamp_fd.close()   
+        down_amp_out = os.popen("/usr/bin/tdsh "+self.__host+" '"+CNSRUN+" -utility vprocmanager -output -force -commands \""+down_amp_cmd+"\"  -nostop'").read()
+        down_amp_fd = open(os.path.join(os.getcwd(),self.__LogDIR__,down_amp_log),"w")
+        down_amp_fd.write(down_amp_out)
+        down_amp_fd.close()   
         
         """TO DO:    CHECK DBS STATE"""
-        if MakeThisDown == int(os.popen( "/usr/bin/tdsh " +self.__host+ " /usr/tdbms/bin/dmpgdo dbsconfig "+MapSlotOfMap+" | grep AMP | grep Down | awk -F' ' '{print $1}' ").read()):
+        if make_this_down == int(os.popen( "/usr/bin/tdsh " +self.__host+ " /usr/tdbms/bin/dmpgdo dbsconfig "+mapslot_of_map+" | grep AMP | grep Down | awk -F' ' '{print $1}' ").read()):
             return True
         else:
             return False
      
-    def AlterTableMap(self, source_map, target_map):
+    def _alter_table_map(self, source_map, target_map):
         '''
         This method will alter all the tables from a source map to a target map
         @param source_map: List containing all the maps having user tables.
         @param target_map: The destination map to which all the tables will be moved.
         '''
-        AlterTableCmd = []
+        source_map = self._usertbl_on_maps()
+        alter_tbl_cmd = []
+        alter_hashindx_cmd = []
+        alter_joinindx_cmd = []
         udaexec = teradata.UdaExec(appName='MHM',version=1,logConsole = True)
         session = udaexec.connect(method='odbc',username='dbc',password='dbc',system=self.__host,dbType='Teradata Database ODBC Driver 16.00')
 
-        for map_v in source_map:
-            for row in session.execute("SELECT A.DATABASENAMEI,B.TVMNAMEI FROM DBC.DBASE A INNER JOIN DBC.TVM B ON A.DATABASEID=B.DATABASEID WHERE MAPNO=(SELECT MAPNO FROM DBC.MAPS WHERE MAPNAME='"+map_v+"')" ):
-                AlterTableCmd.append("alter table "+'.'.join(str(item) for item in row)+", map="+target_map)
-        for AlterQuery in AlterTableCmd:
-            session.execute(AlterQuery)
+        if isinstance(source_map, str):
+            for row in session.execute("SELECT DISTINCT 'ALTER TABLE ' || trim(DataBaseName) || '.' || trim(TableName)||',MAP=' || '"+target_map+"' || ';' (title '') FROM  DBC.TablesV WHERE TableKind LIKE ANY ('T','O') and mapname='"+source_map+"'"):
+                for item in row:
+                    alter_tbl_cmd.append(item)
+            for alter_qry in alter_tbl_cmd:
+                session.execute(alter_qry)
+            alter_tbl_cmd = []
+
+            for row in session.execute("SELECT DISTINCT 'ALTER HASH INDEX ' || trim(DataBaseName) || '.' || trim(TableName)||',MAP=' || '"+target_map+"' || ';' (title '') FROM  DBC.TablesV WHERE TableKind='N' and mapname='"+source_map+"'"):
+                for item in row:
+                    alter_hashindx_cmd.append(item)
+            for alter_qry in alter_hashindx_cmd:
+                session.execute(alter_qry)
+            alter_hashindx_cmd = []
+
+            for row in session.execute("SELECT DISTINCT 'ALTER JOIN INDEX ' || trim(DataBaseName) || '.' || trim(TableName)||',MAP=' || '"+target_map+"' || ';' (title '') FROM  DBC.TablesV WHERE TableKind='I' and mapname='"+source_map+"'"):
+                for item in row:
+                    alter_joinindx_cmd.append(item)
+            for alter_qry in alter_joinindx_cmd:
+                session.execute(alter_qry)
+            alter_joinindx_cmd = []
+
+        elif isinstance(source_map, list):
+            for map_name in source_map:
+                for row in session.execute("SELECT DISTINCT 'ALTER TABLE ' || trim(DataBaseName) || '.' || trim(TableName)||',MAP=' || '"+target_map+"' || ';' (title '') FROM  DBC.TablesV WHERE TableKind LIKE ANY ('T','O') and mapname='"+map_name+"'"):
+                    for item in row:
+                        alter_tbl_cmd.append(item)
+            for alter_qry in alter_tbl_cmd:
+                session.execute(alter_qry)
+
+            for map_name in source_map:
+                for row in session.execute("SELECT DISTINCT 'ALTER HASH INDEX ' || trim(DataBaseName) || '.' || trim(TableName)||',MAP=' || '"+target_map+"' || ';' (title '') FROM  DBC.TablesV WHERE TableKind='N' and mapname='"+map_name+"'"):
+                    for item in row:
+                        alter_hashindx_cmd.append(item)
+            for alter_qry in alter_hashindx_cmd:
+                session.execute(alter_qry)
+
+            for map_name in source_map:
+                for row in session.execute("SELECT DISTINCT 'ALTER JOIN INDEX ' || trim(DataBaseName) || '.' || trim(TableName)||',MAP=' || '"+target_map+"' || ';' (title '') FROM  DBC.TablesV WHERE TableKind='I' and mapname='"+map_name+"'"):
+                    for item in row:
+                        alter_joinindx_cmd.append(item)
+            for alter_qry in alter_joinindx_cmd:
+                session.execute(alter_qry)
 
             
-    def UserTblOnSourceMap(self):
+    def _usertbl_on_maps(self):
         '''
         This method will alter all the tables from a source map to a target map.
         @return: a list of maps having user tables on it.
         '''
-        AllMaps = []
-        SourceMap = []
-        RowInAllMaps = []
+        all_maps = []
+        source_map = []
+        row_inall_maps = []
         udaexec = teradata.UdaExec(appName='MHM',version=1)
         session = udaexec.connect(method='odbc',username='dbc',password='dbc',system=self.__host,dbType='Teradata Database ODBC Driver 16.00')
 
         for row in session.execute("SEL MAPNAME FROM DBC.MAPS WHERE MAPNO >=1025 AND MAPKIND='C' ORDER BY MAPNAME" ):
-            AllMaps.append(str(row[0]))
-            RowInAllMaps.append("SEL COUNT (*) FROM DBC.TVM WHERE MAPNO=(SEL MAPNO FROM MAPS WHERE MAPNAME='"+str(row[0])+"')" )
-        for index,qry in enumerate(RowInAllMaps):
+            all_maps.append(str(row[0]))
+            row_inall_maps.append("SEL COUNT (*) FROM DBC.TVM WHERE MAPNO=(SEL MAPNO FROM MAPS WHERE MAPNAME='"+str(row[0])+"')" )
+        for index,qry in enumerate(row_inall_maps):
             for i in session.execute(qry):
                 if i[0] > 0:
-                    if index != len(RowInAllMaps):
-                        SourceMap.append(AllMaps[index])
+                    if index != len(row_inall_maps):
+                        source_map.append(all_maps[index])
                         break
-            if index == len(RowInAllMaps):
+            if index == len(row_inall_maps):
                 break
         
-        return SourceMap
-    
-#    def CreatePossibleMaps(self, cluster_size):
-#        '''
-#        This method will be used to create all possible type of maps in the system.
-#        '''
-#        self.ChangeClusterWithFixedSize(cluster_size, "cc_log")
-#        Reconfig.IsCommonReconfig("no", '', "rco_cc_Log)
+        return source_map
+
                
-    def CreateSpecificNoOfMaps(self, mapcount, CreateMap_Log):
+    def _create_specific_maps(self, map_count, create_specific_log):
         '''
-        This method will be used to generate different conditions for CreateCommandForSpecificMaps method.
-        @param mapcount: How many maps you want to create.(Logical maps)
+        This method will be used to generate different conditions for _cr_cmdfor_specific_maps method.
+        @param map_count: How many maps you want to create.(Logical maps)
         '''
-        self.mapcount = mapcount
-        self.NoOfMaps = 0
-        self.CreateMap_out = ''
-        if ((int(self.AMPCount)%int(self.ExistNoOfCluster) == 0) and int(self.GetNoOfAmpsInCluster("0"))%self.MinClusterSize ==0):
+        self.map_count = map_count
+        self.amps_in_eachcl = 0
+        self.no_of_maps = 0        
+        self.create_map_out = ''
+        if ((int(self.t_amps_in_globalmap)%int(self.exist_num_cluster) == 0) and int(self._get_ampIn_cluster("0"))%self.min_cluster_size ==0):
             '''
             All amps are distributed evenly across all clusters,all the clsuters are having even number of amps.
             '''
-            AmpsInEachCluster = self.MinClusterSize
-            NoOfCluster = int(self.AMPCount)/AmpsInEachCluster
-        elif ((int(self.AMPCount)%int(self.ExistNoOfCluster) == 0) and int(self.GetNoOfAmpsInCluster("0"))%self.MinClusterSize !=0):
+            amps_in_eachcl = self.min_cluster_size
+            no_of_cluster = int(self.t_amps_in_globalmap)/amps_in_eachcl
+        elif ((int(self.t_amps_in_globalmap)%int(self.exist_num_cluster) == 0) and int(self._get_ampIn_cluster("0"))%self.min_cluster_size !=0):
             '''
             This means all the clusters in the configuration is having 2amps/cluster.
             '''
-            AmpsInEachCluster = int(self.GetNoOfAmpsInCluster("0"))
-            NoOfCluster = int(self.AMPCount)/AmpsInEachCluster
+            amps_in_eachcl = int(self._get_ampIn_cluster("0"))
+            no_of_cluster = int(self.t_amps_in_globalmap)/amps_in_eachcl
         
-        self.CreateCommandForSpecificMaps(AmpsInEachCluster, NoOfCluster)
+        self._cr_cmdfor_specific_maps(amps_in_eachcl, no_of_cluster)
 
-        del_fd = open(os.path.join(os.getcwd(),self.__LogDIR__,CreateMap_Log),"w")
-        del_fd.write(self.CreateMap_out)
-        del_fd.close()
+        cr_specific_map_fd = open(os.path.join(os.getcwd(),self.__LogDIR__,create_specific_log),"w")
+        cr_specific_map_fd.write(self.create_map_out)
+        cr_specific_map_fd.close()
 
-        if re.search(".*TD_Map(.*)saved.*" ,self.CreateMap_out):
+        if re.search(".*TD_Map(.*)saved.*" ,self.create_map_out):
             return True
         else:
             return False    
                     
-    def CreateCommandForSpecificMaps(self, AmpsInEachCluster, NoOfCluster):
+    def _cr_cmdfor_specific_maps(self, amps_in_eachcl, no_of_cluster):
         '''
         This method will be used to create all possible types of maps.
         '''
         '''
         Here we will create config command to delete amsp from lower end.
         '''
-        CreateMapCmd = ''            
+        create_map_cmd = ''            
         i = 0
-        StartAmp = 0
-        TempAmp = 0
-        while i<NoOfCluster:
-            EndAmp = (TempAmp+AmpsInEachCluster)-1
-            CreateMapCmd += "{bc} {da %d-%d} {ec} " %(StartAmp, EndAmp)
-            TempAmp = EndAmp+1
-            self.NoOfMaps+=1
-            if (self.NoOfMaps < self.mapcount) and (EndAmp != int(self.AMPCount)-AmpsInEachCluster-1):
+        start_amp = 0
+        temp_amp = 0
+        while i<no_of_cluster:
+            end_amp = (temp_amp+amps_in_eachcl)-1
+            create_map_cmd += "{bc} {da %d-%d} {ec} " %(start_amp, end_amp)
+            temp_amp = end_amp+1
+            self.no_of_maps+=1
+            if (self.no_of_maps < self.map_count) and (end_amp != int(self.t_amps_in_globalmap)-amps_in_eachcl-1):
                 i+=1
             else:
                 break
-        self.ExecuteCommandForSpecificMaps(CreateMapCmd)
+        self._exe_cmdfor_specificmap(create_map_cmd)
         i = None    
-        StartAmp = None
-        TempAmp = None
-        EndAmp = None
+        start_amp = None
+        temp_amp = None
+        end_amp = None
         '''
         Here we will create config command to delete amps from higher end
         '''
-        CreateMapCmd = ''
-        j = NoOfCluster
-        EndAmp = int(self.EndOnlineAMP)
-        TempAmp = EndAmp
+        create_map_cmd = ''
+        j = no_of_cluster
+        end_amp = int(self.end_onl_amp)
+        temp_amp = end_amp
         while j>0:
-            StartAmp = (TempAmp-AmpsInEachCluster)+1
-            CreateMapCmd += "{bc} {da %d-%d} {ec} {no} " %(StartAmp, EndAmp)
-            TempAmp = StartAmp-1
-            self.NoOfMaps+=1
-            if (self.NoOfMaps < self.mapcount) and (StartAmp != AmpsInEachCluster):
+            start_amp = (temp_amp-amps_in_eachcl)+1
+            create_map_cmd += "{bc} {da %d-%d} {ec} {no} " %(start_amp, end_amp)
+            temp_amp = start_amp-1
+            self.no_of_maps+=1
+            if (self.no_of_maps < self.map_count) and (start_amp != amps_in_eachcl):
                 j-=1
             else:
                 break
-        self.ExecuteCommandForSpecificMaps(CreateMapCmd)            
+        self._exe_cmdfor_specificmap(create_map_cmd)            
         j = None    
-        StartAmp = None
-        TempAmp = None
-        EndAmp = None
+        start_amp = None
+        temp_amp = None
+        end_amp = None
         '''
         Here we will create config command to delete amps in overlap manner. From both end it will delete
         same number of amps
         '''
-        CreateMapCmd = ''
+        create_map_cmd = ''
         i = 0
-        j = NoOfCluster
-        StartAmpTop = 0
-        TempVarTop = 0
-        EndAmpDwn = int(self.EndOnlineAMP)
-        TempVarDwn = EndAmpDwn
-        if (int(NoOfCluster)%2==0):
-            while i<NoOfCluster and j>0:
-                StartAmpDwn = (TempVarDwn-AmpsInEachCluster)+1    #This is the start amp of the delete from high
-                EndAmpTop = (TempVarTop+AmpsInEachCluster)-1      #This is the end amp of the delete from top
-                CreateMapCmd += "{bc} {da %d-%d} {da %d-%d} {ec} " %(StartAmpTop, EndAmpTop, StartAmpDwn, EndAmpDwn)
-                TempVarDwn = StartAmpDwn-1                        #This is the last amp of the next cluster coming from end
-                TempVarTop = EndAmpTop+1                          #This is the first amp of the next cluster coming from top.
-                self.NoOfMaps+=1
-                if self.NoOfMaps < self.mapcount and (TempVarTop != TempVarDwn-(2*(AmpsInEachCluster-1))-1):
+        j = no_of_cluster
+        start_amp_top = 0
+        temp_var_top = 0
+        end_amp_down = int(self.end_onl_amp)
+        temp_var_down = end_amp_down
+        if (int(no_of_cluster)%2==0):
+            while i<no_of_cluster and j>0:
+                start_amp_down = (temp_var_down-amps_in_eachcl)+1    #This is the start amp of the delete from high
+                end_amp_top = (temp_var_top+amps_in_eachcl)-1      #This is the end amp of the delete from top
+                create_map_cmd += "{bc} {da %d-%d} {da %d-%d} {ec} " %(start_amp_top, end_amp_top, start_amp_down, end_amp_down)
+                temp_var_down = start_amp_down-1                        #This is the last amp of the next cluster coming from end
+                temp_var_top = end_amp_top+1                          #This is the first amp of the next cluster coming from top.
+                self.no_of_maps+=1
+                if self.no_of_maps < self.map_count and (temp_var_top != temp_var_down-(2*(amps_in_eachcl-1))-1):
                     i+=1
                     j-=1
                 else:
                     break
         else:
-            while i<NoOfCluster and j>0:
-                StartAmpDwn = (TempVarDwn-AmpsInEachCluster)+1    #This is the start amp of the delete from high
-                EndAmpTop = (TempVarTop+AmpsInEachCluster)-1      #This is the end amp of the delete from top
-                CreateMapCmd += "{bc} {da %d-%d} {da %d-%d} {ec} " %(StartAmpTop, EndAmpTop, StartAmpDwn, EndAmpDwn)
-                TempVarDwn = StartAmpDwn-1                        #This is the last amp of the next cluster coming from end
-                TempVarTop = EndAmpTop+1                          #This is the first amp of the next cluster coming from top.
-                self.NoOfMaps+=1
-                if self.NoOfMaps < self.mapcount and (TempVarTop != TempVarDwn-AmpsInEachCluster+1):
+            while i<no_of_cluster and j>0:
+                start_amp_down = (temp_var_down-amps_in_eachcl)+1    #This is the start amp of the delete from high
+                end_amp_top = (temp_var_top+amps_in_eachcl)-1      #This is the end amp of the delete from top
+                create_map_cmd += "{bc} {da %d-%d} {da %d-%d} {ec} " %(start_amp_top, end_amp_top, start_amp_down, end_amp_down)
+                temp_var_down = start_amp_down-1                        #This is the last amp of the next cluster coming from end
+                temp_var_top = end_amp_top+1                          #This is the first amp of the next cluster coming from top.
+                self.no_of_maps+=1
+                if self.no_of_maps < self.map_count and (temp_var_top != temp_var_down-amps_in_eachcl+1):
                     i+=1
                     j-=1
                 else:
                     break
-        self.ExecuteCommandForSpecificMaps(CreateMapCmd)                        
+        self._exe_cmdfor_specificmap(create_map_cmd)                        
         i = None
         j = None
-        StartAmpTop = None
-        TempVarTop = None
-        EndAmpTop = None 
-        StartAmpDwn= None 
-        EndAmpDwn = None
+        start_amp_top = None
+        temp_var_top = None
+        end_amp_top = None 
+        start_amp_down= None 
+        end_amp_down = None
         '''
         Here we will create overlap maps with with deleting unequally from both ends.
         '''
-        CreateMapCmd = ''
-        SysStartAmp = 0
-        SysEndAmp = int(self.EndOnlineAMP)
-        TempStartAmp = SysStartAmp
-        TempEndAMp = SysEndAmp
+        create_map_cmd = ''
+        sys_start_amp = 0
+        sys_end_amp = int(self.end_onl_amp)
+        temp_start_amp = sys_start_amp
+        temp_end_amp = sys_end_amp
         i = 0
-        j = NoOfCluster
+        j = no_of_cluster
         count = 0
         while j>0:
             if count == 0:
-                StartAmp = (TempEndAMp-2*AmpsInEachCluster)+1
+                start_amp = (temp_end_amp-2*amps_in_eachcl)+1
             else:
-                StartAmp = (TempEndAMp-AmpsInEachCluster)+1
-            CreateMapCmd += "{bc} {da %d-%d} {da %d-%d} {ec} " %(SysStartAmp, (SysStartAmp+AmpsInEachCluster)-1, StartAmp, SysEndAmp)
-            TempEndAMp = StartAmp-1
-            self.NoOfMaps+=1
-            if (self.NoOfMaps < self.mapcount) and (TempEndAMp-AmpsInEachCluster != SysStartAmp+AmpsInEachCluster-1):
+                start_amp = (temp_end_amp-amps_in_eachcl)+1
+            create_map_cmd += "{bc} {da %d-%d} {da %d-%d} {ec} " %(sys_start_amp, (sys_start_amp+amps_in_eachcl)-1, start_amp, sys_end_amp)
+            temp_end_amp = start_amp-1
+            self.no_of_maps+=1
+            if (self.no_of_maps < self.map_count) and (temp_end_amp-amps_in_eachcl != sys_start_amp+amps_in_eachcl-1):
                 j-=1
                 count+=1
             else:
                 break
-        self.ExecuteCommandForSpecificMaps(CreateMapCmd)                                            
-        CreateMapCmd = ''
+        self._exe_cmdfor_specificmap(create_map_cmd)                                            
+        create_map_cmd = ''
         count = 0
-        while i<NoOfCluster:
+        while i<no_of_cluster:
             if count == 0:
-                EndAmp = (TempStartAmp+2*AmpsInEachCluster)-1
+                end_amp = (temp_start_amp+2*amps_in_eachcl)-1
             else:
-                EndAmp = (TempStartAmp+AmpsInEachCluster)-1
-            CreateMapCmd += "{bc} {da %d-%d} {da %d-%d} {ec} " %(SysStartAmp, EndAmp, (SysEndAmp-AmpsInEachCluster)+1, SysEndAmp)
-            TempStartAmp = EndAmp+1
-            self.NoOfMaps+=1
-            if (self.NoOfMaps < self.mapcount) and (TempStartAmp+AmpsInEachCluster != SysEndAmp-AmpsInEachCluster+1):
+                end_amp = (temp_start_amp+amps_in_eachcl)-1
+            create_map_cmd += "{bc} {da %d-%d} {da %d-%d} {ec} " %(sys_start_amp, end_amp, (sys_end_amp-amps_in_eachcl)+1, sys_end_amp)
+            temp_start_amp = end_amp+1
+            self.no_of_maps+=1
+            if (self.no_of_maps < self.map_count) and (temp_start_amp+amps_in_eachcl != sys_end_amp-amps_in_eachcl+1):
                 i+=1
                 count+=1
             else:
                 break
-        self.ExecuteCommandForSpecificMaps(CreateMapCmd)                            
+        self._exe_cmdfor_specificmap(create_map_cmd)                                      
 
     
-    def ExecuteCommandForSpecificMaps(self, CreateMapCmd):
+    def _exe_cmdfor_specificmap(self, create_map_cmd):
         '''
-        This method will be used to pass the command created in CreateSpecificNoOfMaps method.
+        This method will be used to pass the command created in _create_specific_maps method.
         '''                                                   
-        CreateMapCmd = CreateMapCmd+"{s}"
-        cmd = "/usr/bin/tdsh "+self.__host+" '"+CNSRUN+" -utility config -output -force -commands \""+CreateMapCmd+"\"  -nostop'"
-        self.CreateMap_out += os.popen(cmd).read()
+        create_map_cmd = create_map_cmd+"{s}"
+        cmd = "/usr/bin/tdsh "+self.__host+" '"+CNSRUN+" -utility config -output -force -commands \""+create_map_cmd+"\"  -nostop'"
+        self.create_map_out += os.popen(cmd).read()
             
-    def DropMap(self, auto_select, map_name):
+    def _drop_map(self, auto_select, map_name):
         '''
         This method will be used to drop a map
         @param map_name: the list containing all the map names to be deleted
@@ -956,7 +1107,7 @@ class Reconfig(object):
         Constructor
         parameters:
         system    : Name of the system
-        ampcount  : No of amps in the system
+        t_amps_in_globalmap  : No of amps in the system
         path      : The Log Directory
         '''
         
@@ -972,14 +1123,14 @@ class Reconfig(object):
         
         self.Flags_G = {105: 100};
             
-    def ChangeGenralFlag(self, Flags, dbscntrl_Log):
+    def _change_general_flag(self, flags, dbscntrl_Log):
         '''
         This method will be used to change the value of a general flag.
         '''
         dbscontrol_cmd = "/usr/bin/tdsh "+self.__host+" '"+CNSRUN+" -utility dbscontrol -output -force -commands \""
         cmd_list = ""
-        for key in Flags.keys():
-            cmd_list += " {MODIFY GENERAL "+str(key)+"="+str(Flags[key])+"}"
+        for key in flags.keys():
+            cmd_list += " {MODIFY GENERAL "+str(key)+"="+str(flags[key])+"}"
             cmd_list += " {write}"
         dbscontrol_cmd += cmd_list+" {quit} \" -nostop'"
         dbscontrol_Output = os.popen(dbscontrol_cmd).read()
@@ -993,117 +1144,113 @@ class Reconfig(object):
         return True
 
             
-    def IsADDAmpReconfig(self, SPA_Change, NewMap_as_sys_default, sys_default_map, option, Add_R_Log):
+    def _is_addamp_rco(self, spa_change, newmap_as_sysdef, sys_default_map, option, is_addamp_log):
         '''
         This method will be used to run ADD amp reconfig.
         '''
         reconfig_cmd = ''
-        if NewMap_as_sys_default == "no":
-            if SPA_Change == "yes":
+        if newmap_as_sysdef == "no":
+            if spa_change == "yes":
                 reconfig_cmd = "{yes} {no} "+sys_default_map+" "+option
             else:
-                if self.ChangeGenralFlag(self.Flags_G, "SPA_FlagChng_Log") is True:
+                if self._change_general_flag(self.Flags_G, "SPA_FlagChng_Log") is True:
                     reconfig_cmd = "{no} {no} {no} "+sys_default_map+" "+option
-        elif NewMap_as_sys_default == "yes":
-            if SPA_Change == "yes":
+        elif newmap_as_sysdef == "yes":
+            if spa_change == "yes":
                 reconfig_cmd = "{yes} {yes} "+option
             else:
-                if self.ChangeGenralFlag(self.Flags_G, "SPA_FlagChng_Log") is True:
+                if self._change_general_flag(self.Flags_G, "SPA_FlagChng_Log") is True:
                     reconfig_cmd = "{no} {no} {yes} "+option
         reconfig_cmd = "{r} "+reconfig_cmd
 
-#        print "IsADDAmpReconfig: "+reconfig_cmd
         cmd = "/usr/bin/tdsh "+self.__host+" \""+CNSRUN+" -utility reconfig -prompt '>' -output -force -commands '"+reconfig_cmd+"'  -nostop\""
-        reconfig_out = os.popen(cmd).read()
-        aa_rco_fd = open(os.path.join(os.getcwd(),self.__LogDIR__,Add_R_Log),"w")
-        aa_rco_fd.write(reconfig_out)
-        aa_rco_fd.close()
+        is_addamp_out = os.popen(cmd).read()
+        is_addamp_fd = open(os.path.join(os.getcwd(),self.__LogDIR__,is_addamp_log),"w")
+        is_addamp_fd.write(is_addamp_out)
+        is_addamp_fd.close()
 
-        if re.search(r"Restarting DBS due to completion of reconfiguration.",reconfig_out):
+        if re.search(r"Restarting DBS due to completion of reconfiguration.",is_addamp_out):
             return True
         else:
             return False
 
             
-    def IsLogicalChngReconfig(self, dict_map_change, dict_map, sys_default_change, sys_default_map, OnlyLogicalRco_Log):
+    def _is_logicalchng_rco(self, dict_map_change, dict_map, sys_default_change, sys_default_map, _is_logicalchng_log):
         '''
         This method will be used to run reconfig to change the Dictionary map or system default map
         '''
-        reconfig_cmd = ''
+        is_logicalchng_cmd = ''
         if dict_map_change == "yes":
             if sys_default_change == "yes":
-                reconfig_cmd = "{yes} "+dict_map+" {yes} "+sys_default_map
+                is_logicalchng_cmd = "{yes} "+dict_map+" {yes} "+sys_default_map
             else:
-                reconfig_cmd = "{yes} "+dict_map+" {no}"
+                is_logicalchng_cmd = "{yes} "+dict_map+" {no}"
         elif dict_map_change == "no":
             if sys_default_change == "yes":
-                reconfig_cmd = "{no} {yes} "+sys_default_map
+                is_logicalchng_cmd = "{no} {yes} "+sys_default_map
             else:
                 print "\nNo changes to the current configuration selected. Aborting process"
                 return False
-        reconfig_cmd = "{r} "+reconfig_cmd
-        cmd = "/usr/bin/tdsh "+self.__host+" \""+CNSRUN+" -utility reconfig -prompt '>' -output -force -commands '"+reconfig_cmd+"'  -nostop\""
-        reconfig_out = os.popen(cmd).read()
-        logical_rco_fd = open(os.path.join(os.getcwd(),self.__LogDIR__,OnlyLogicalRco_Log),"w")
-        logical_rco_fd.write(reconfig_out)
-        logical_rco_fd.close()
+        is_logicalchng_cmd = "{r} "+is_logicalchng_cmd
+        cmd = "/usr/bin/tdsh "+self.__host+" \""+CNSRUN+" -utility reconfig -prompt '>' -output -force -commands '"+is_logicalchng_cmd+"'  -nostop\""
+        is_logicalchng_out = os.popen(cmd).read()
+        is_logicalchng_fd = open(os.path.join(os.getcwd(),self.__LogDIR__,_is_logicalchng_log),"w")
+        is_logicalchng_fd.write(is_logicalchng_out)
+        is_logicalchng_fd.close()
 
-        if re.search(r"Restarting DBS due to completion of reconfiguration.",reconfig_out):
+        if re.search(r"Restarting DBS due to completion of reconfiguration.",is_logicalchng_out):
             return True
         else:
             return False
 
-
-    def IsCommonReconfig(self, sys_default_change, sys_default_map, CommonRco_Log):
+    def _is_common_rco(self, sys_default_change, sys_default_map, is_common_rco_log):
         '''
         This method will be used to run Del/Del+Mod/Mod amp reconfigs.
         '''
-        reconfig_cmd = ''
+        is_common_rco_cmd = ''
         if sys_default_change == "yes":
-            reconfig_cmd = "{yes} "+sys_default_map
+            is_common_rco_cmd = "{yes} "+sys_default_map
         elif sys_default_change == "no":
-            reconfig_cmd = "{no} "
-        reconfig_cmd = "{r} "+reconfig_cmd
-        print reconfig_cmd
-        cmd = "/usr/bin/tdsh "+self.__host+" \""+CNSRUN+" -utility reconfig -prompt '>' -output -force -commands '"+reconfig_cmd+"'  -nostop\""
-        reconfig_out = os.popen(cmd).read()
-        common_rco_fd = open(os.path.join(os.getcwd(),self.__LogDIR__,CommonRco_Log),"w")
-        common_rco_fd.write(reconfig_out)
-        common_rco_fd.close()
+            is_common_rco_cmd = "{no} "
+        is_common_rco_cmd = "{r} "+is_common_rco_cmd
+        print is_common_rco_cmd
+        cmd = "/usr/bin/tdsh "+self.__host+" \""+CNSRUN+" -utility reconfig -prompt '>' -output -force -commands '"+is_common_rco_cmd+"'  -nostop\""
+        is_common_rco_out = os.popen(cmd).read()
+        is_common_rco_fd = open(os.path.join(os.getcwd(),self.__LogDIR__,is_common_rco_log),"w")
+        is_common_rco_fd.write(is_common_rco_out)
+        is_common_rco_fd.close()
 
-        if re.search(r"Restarting DBS due to completion of reconfiguration.",reconfig_out):
+        if re.search(r"Restarting DBS due to completion of reconfiguration.",is_common_rco_out):
             return True
         else:
             return False
 
-    def IsAddCCReconfig(self, SPA_Change, sys_default_change, sys_default_map, AddaCCR_Log):
+    def _is_add_cc_rco(self, spa_change, sys_default_change, sys_default_map, is_add_cc_rco_log):
         '''
         This method will be used to run Add+ClusterChange amp reconfig.
         '''
-        reconfig_cmd = ''
+        is_add_cc_rco_cmd = ''
         if sys_default_change == "no":
-            if SPA_Change == "yes":
-                reconfig_cmd = "{yes} {no} "
+            if spa_change == "yes":
+                is_add_cc_rco_cmd = "{yes} {no} "
             else:
-                if self.ChangeGenralFlag(self.Flags_G, "SPA_FlagChng_Log") is True:
-                    reconfig_cmd = "{no} {no} {no} "
+                if self._change_general_flag(self.Flags_G, "SPA_FlagChng_Log") is True:
+                    is_add_cc_rco_cmd = "{no} {no} {no} "
         elif sys_default_change == "yes":
-            if SPA_Change == "yes":
-                reconfig_cmd = "{yes} {yes} "+sys_default_map
+            if spa_change == "yes":
+                is_add_cc_rco_cmd = "{yes} {yes} "+sys_default_map
             else:
-                if self.ChangeGenralFlag(self.Flags_G, "SPA_FlagChng_Log") is True:
-                    reconfig_cmd = "{no} {no} {yes} "+sys_default_map
-        reconfig_cmd = "{r} "+reconfig_cmd
-        print "IsAddCCReconfig: "+reconfig_cmd
-        cmd = "/usr/bin/tdsh "+self.__host+" \""+CNSRUN+" -utility reconfig -prompt '>' -output -force -commands '"+reconfig_cmd+"'  -nostop\""
-        reconfig_out = os.popen(cmd).read()
-        aaNcc_rco_fd = open(os.path.join(os.getcwd(),self.__LogDIR__,AddaCCR_Log),"w")
-        aaNcc_rco_fd.write(reconfig_out)
-        aaNcc_rco_fd.close()
+                if self._change_general_flag(self.Flags_G, "SPA_FlagChng_Log") is True:
+                    is_add_cc_rco_cmd = "{no} {no} {yes} "+sys_default_map
+        is_add_cc_rco_cmd = "{r} "+is_add_cc_rco_cmd
+        print "_is_add_cc_rco: "+is_add_cc_rco_cmd
+        cmd = "/usr/bin/tdsh "+self.__host+" \""+CNSRUN+" -utility reconfig -prompt '>' -output -force -commands '"+is_add_cc_rco_cmd+"'  -nostop\""
+        is_add_cc_rco_out = os.popen(cmd).read()
+        is_add_cc_rco_fd = open(os.path.join(os.getcwd(),self.__LogDIR__,is_add_cc_rco_log),"w")
+        is_add_cc_rco_fd.write(is_add_cc_rco_out)
+        is_add_cc_rco_fd.close()
 
-        if re.search(r"Restarting DBS due to completion of reconfiguration.",reconfig_out):
+        if re.search(r"Restarting DBS due to completion of reconfiguration.",is_add_cc_rco_out):
             return True
         else:
             return False
-
-    
